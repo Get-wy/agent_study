@@ -1,11 +1,13 @@
-import os
+import sys
 import json
-from openai import OpenAI
+from pathlib import Path
 
-client = OpenAI(
-    api_key=os.getenv("aliQwen-api"),
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from utils import get_llm
+
+from langchain_core.messages import HumanMessage, ToolMessage
+
+llm = get_llm()
 
 
 def get_order_count(date: str) -> dict:
@@ -71,50 +73,42 @@ FUNCTION_MAP = {
 }
 
 
+llm_with_tools = llm.bind_tools(tools)
+
+
 def chat_with_tools(user_message: str):
     print(f"\n用户: {user_message}")
-    messages = [{"role": "user", "content": user_message}]
+    messages = [HumanMessage(user_message)]
 
-    response = client.chat.completions.create(
-        model="qwen-plus",
-        messages=messages,
-        tools=tools,
-        tool_choice="auto",
-    )
+    response = llm_with_tools.invoke(messages)
 
-    msg = response.choices[0].message
-
-    if msg.tool_calls:
+    if response.tool_calls:
         print(f"\n[LLM 决定调用工具]")
-        messages.append(msg)
+        messages.append(response)
 
-        for tool_call in msg.tool_calls:
-            fn_name = tool_call.function.name
-            fn_args = json.loads(tool_call.function.arguments)
+        for tool_call in response.tool_calls:
+            fn_name = tool_call["name"]
+            fn_args = tool_call["args"]
 
             print(f"  → 调用: {fn_name}({fn_args})")
             result = FUNCTION_MAP[fn_name](**fn_args)
             print(f"  ← 结果: {result}")
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": json.dumps(result, ensure_ascii=False),
-            })
+            messages.append(ToolMessage(
+                content=json.dumps(result, ensure_ascii=False),
+                tool_call_id=tool_call["id"],
+            ))
 
-        final_response = client.chat.completions.create(
-            model="qwen-plus",
-            messages=messages,
-        )
-        answer = final_response.choices[0].message.content
+        final_response = llm_with_tools.invoke(messages)
+        answer = final_response.content
     else:
-        answer = msg.content
+        answer = response.content
 
     print(f"\nAI: {answer}")
     return answer
 
 
 if __name__ == "__main__":
-    chat_with_tools("2024-01-17 的订单量是多少？")
-    chat_with_tools("帮我查一下用户 U001 的信息")
-    chat_with_tools("你好，今天天气怎么样")
+    # chat_with_tools("2024-01-17 的订单量是多少？")
+    chat_with_tools("帮我查一下用户 U003 的信息")
+    # chat_with_tools("你好，今天天气怎么样")

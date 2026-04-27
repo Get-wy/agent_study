@@ -6,10 +6,12 @@ LastEditTime: 2026-04-27 15:33:41
 FilePath: /AiAgent/deepseek_rag_example.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
-import os
+import sys
 from pathlib import Path
 
-from langchain.chat_models import init_chat_model
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from utils import get_api_key, get_llm
+
 from langchain_community.document_loaders import TextLoader
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import Redis
@@ -18,51 +20,10 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
-ENV_FILE = PROJECT_ROOT / ".env"
 DOCUMENT_FILE = Path("alibaba.txt")
 
-
-def load_env_file(env_path):
-    if not env_path.exists():
-        return
-
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        os.environ.setdefault(key, value)
-
-
-load_env_file(ENV_FILE)
-DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
-
-if not DASHSCOPE_API_KEY:
-    raise ValueError(
-        f"未找到 DASHSCOPE_API_KEY。请在根目录 env 文件中配置: {ENV_FILE}"
-    )
-
-
-def preview_text(text, limit=120):
-    cleaned = text.replace("\n", " ").strip()
-    if len(cleaned) <= limit:
-        return cleaned
-    return f"{cleaned[:limit]}..."
-
-
-# 1. 初始化阿里 DashScope 聊天模型
-# 说明：
-# - 这里通过 OpenAI 兼容接口调用阿里通义模型
-llm = init_chat_model(
-    model="qwen-plus",
-    model_provider="openai",
-    api_key=DASHSCOPE_API_KEY,
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-)
+DASHSCOPE_API_KEY = get_api_key()
+llm = get_llm()
 
 
 # 2. 定义 Prompt 模板
