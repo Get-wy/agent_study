@@ -81,7 +81,7 @@ def chat_with_tools(user_message: str):
     messages = [HumanMessage(user_message)]
 
     response = llm_with_tools.invoke(messages)
-
+    
     if response.tool_calls:
         print(f"\n[LLM 决定调用工具]")
         messages.append(response)
@@ -110,5 +110,5 @@ def chat_with_tools(user_message: str):
 
 if __name__ == "__main__":
     # chat_with_tools("2024-01-17 的订单量是多少？")
-    chat_with_tools("帮我查一下用户 U003 的信息")
+    chat_with_tools("帮我查一下用户 U001 的信息")
     # chat_with_tools("你好，今天天气怎么样")

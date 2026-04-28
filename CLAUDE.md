@@ -10,7 +10,8 @@ AiAgent/
 ├── 学习路线图.md
 ├── 第1课_最小RAG/demo.py
 ├── 第2课_Function_Calling/demo.py
-└── 第3课_Streaming/demo.py
+├── 第3课_Streaming/demo.py
+└── 第4课_多轮对话与记忆/demo.py
 ```
 
 ## utils.py 公共方法
@@ -48,6 +49,13 @@ from utils import get_llm, get_api_key
 - `llm.stream()` 替换 `invoke()`，迭代 chunk 拿分段内容
 - SSE 协议：`data: {...}\n\n` + `data: [DONE]\n\n`
 - 前端用 `EventSource` 或 `fetch + ReadableStream` 接收
+- 无新增依赖
+
+### 第4课_多轮对话与记忆
+- LLM 无状态，记忆 = 每次把历史消息列表一起传入
+- 三种策略：全量（token线性增长）/ 窗口（保留近N轮）/ 摘要（压缩旧消息）
+- `SystemMessage` 设定身份，`HumanMessage / AIMessage` 维护历史
+- 持久化：session_id 粒度存 Redis 或数据库
 - 无新增依赖
 
 ## 环境信息
