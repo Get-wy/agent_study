@@ -9,7 +9,8 @@ AiAgent/
 ├── CLAUDE.md
 ├── 学习路线图.md
 ├── 第1课_最小RAG/demo.py
-└── 第2课_Function_Calling/demo.py
+├── 第2课_Function_Calling/demo.py
+└── 第3课_Streaming/demo.py
 ```
 
 ## utils.py 公共方法
@@ -42,6 +43,12 @@ from utils import get_llm, get_api_key
 - LLM 自主决定调用哪个工具（Function Calling）
 - 用 `llm.bind_tools(tools)` 绑定工具，`HumanMessage / ToolMessage` 传递消息
 - 依赖新增：`dashscope`
+
+### 第3课_Streaming
+- `llm.stream()` 替换 `invoke()`，迭代 chunk 拿分段内容
+- SSE 协议：`data: {...}\n\n` + `data: [DONE]\n\n`
+- 前端用 `EventSource` 或 `fetch + ReadableStream` 接收
+- 无新增依赖
 
 ## 环境信息
 
