@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Read(//Users/mac/.claude/**)",
-      "Read(//Users/mac/.claude/plugins/**)"
+      "Read(//Users/mac/.claude/plugins/**)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(/opt/anaconda3/envs/rag/bin/python demo.py)"
     ]
   }
 }

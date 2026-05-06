@@ -12,7 +12,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 DOCUMENT_FILE = Path(__file__).resolve().parent.parent / "第1课_最小RAG" / "alibaba.txt"
 DASHSCOPE_API_KEY = get_api_key()
-TEST_QUESTION = "阿里巴巴的主要业务有哪些？"
+TEST_QUESTION = "智核科技的员工晋升有哪些？"
 
 embeddings = DashScopeEmbeddings(
     model="text-embedding-v3",
@@ -56,12 +56,12 @@ def demo_splitter_comparison():
     print(f"问题: {TEST_QUESTION}")
     print("=" * 55)
 
-    char_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=100, separator="\n")
+    char_splitter = CharacterTextSplitter(chunk_size=200, chunk_overlap=20, separator="\n")
     char_store, char_chunks = build_store(char_splitter, "rag5_char")
     print(f"\nCharacterTextSplitter: 切出 {len(char_chunks)} 个 chunk")
     show_results(char_store, k=3, label="CharacterTextSplitter")
 
-    rec_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    rec_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=20)
     rec_store, rec_chunks = build_store(rec_splitter, "rag5_recursive")
     print(f"\nRecursiveCharacterTextSplitter: 切出 {len(rec_chunks)} 个 chunk")
     show_results(rec_store, k=3, label="RecursiveCharacterTextSplitter")
@@ -77,7 +77,7 @@ def demo_chunk_size():
     print(f"问题: {TEST_QUESTION}")
     print("=" * 55)
 
-    for chunk_size, overlap in [(200, 40), (500, 100), (1000, 200)]:
+    for chunk_size, overlap in [(200, 40), (400, 80), (800, 160)]:
         splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=overlap)
         store, chunks = build_store(splitter, f"rag5_size{chunk_size}")
         print(f"\nchunk_size={chunk_size}, overlap={overlap}: 共 {len(chunks)} 个 chunk")

@@ -4,16 +4,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils import get_llm
 
-from langchain.agents import create_react_agent, AgentExecutor
+from langchain.agents import create_agent as create_react_agent
 from langchain_core.tools import tool
-from langchain_core.prompts import PromptTemplate
+
+# 安装：langgraph（langchain 1.x 已内置 langgraph 依赖）
 
 llm = get_llm()
 
 
-# ────────────────────────────────────────────
-# 工具定义（全部 mock，无需真实 API）
-# ────────────────────────────────────────────
 @tool
 def search_weather(city: str) -> str:
     """查询指定城市的今日天气，支持北京、上海、广州"""
@@ -47,64 +45,37 @@ def get_exchange_rate(currency: str) -> str:
 
 tools = [search_weather, calculate, get_exchange_rate]
 
-# ReAct prompt：LangChain 解析器依赖 Action / Final Answer 这两个英文关键词
-REACT_TEMPLATE = """你是一个智能助手，能使用以下工具回答用户问题：
-
-{tools}
-
-必须严格按照以下格式输出（关键词不能改变）：
-
-Question: 用户的问题
-Thought: 分析下一步该做什么
-Action: 要使用的工具名，必须是 [{tool_names}] 之一
-Action Input: 传给工具的参数
-Observation: 工具返回的结果
-...（上面4行可以重复多次）
-Thought: 我现在知道最终答案了
-Final Answer: 对用户问题的完整回答
-
-开始！
-
-Question: {input}
-Thought:{agent_scratchpad}"""
-
-prompt = PromptTemplate.from_template(REACT_TEMPLATE)
-agent = create_react_agent(llm, tools, prompt)
-agent_executor = AgentExecutor(
-    agent=agent,
-    tools=tools,
-    verbose=True,
-    max_iterations=6,
-    handle_parsing_errors=True,
-)
+# LangGraph 的 create_react_agent：自动处理 Thought→Action→Observation 循环
+agent = create_react_agent(llm, tools)
 
 
-# ────────────────────────────────────────────
-# Demo 1: 单步任务
-# LLM 决定调一个工具就能回答
-# ────────────────────────────────────────────
-def demo_single_step():
-    print("\n" + "=" * 55)
-    print("Demo 1: 单步任务")
-    print("=" * 55)
-    result = agent_executor.invoke({"input": "北京今天天气怎么样？"})
-    print(f"\n最终回答: {result['output']}")
+def run(question: str, label: str):
+    print(f"\n{'=' * 55}")
+    print(f"{label}")
+    print(f"{'=' * 55}")
+    print(f"用户: {question}")
 
+    result = agent.invoke({"messages": [{"role": "user", "content": question}]})
+    
+    # 打印中间推理步骤
+    for msg in result["messages"]:
+        role = getattr(msg, "type", type(msg).__name__)
+        if role == "tool":
+            print(f"  [工具返回] {msg.content}")
+        elif role == "ai" and msg.tool_calls:
+            for tc in msg.tool_calls:
+                print(f"  [调用工具] {tc['name']}({tc['args']})")
 
-# ────────────────────────────────────────────
-# Demo 2: 多步任务
-# LLM 需要依次调用多个工具，自主规划顺序
-# ────────────────────────────────────────────
-def demo_multi_step():
-    print("\n" + "=" * 55)
-    print("Demo 2: 多步任务（观察 Thought→Action→Observation 循环）")
-    print("=" * 55)
-    result = agent_executor.invoke({
-        "input": "北京今天气温多少度？100美元能换多少人民币？把这两个数字加起来。"
-    })
-    print(f"\n最终回答: {result['output']}")
+    final = result["messages"][-1].content
+    print(f"\n最终回答: {final}")
 
 
 if __name__ == "__main__":
-    demo_single_step()
-    demo_multi_step()
+    # Demo 1: 单步任务，LLM 调一个工具即可回答
+    run("北京今天天气怎么样？", "Demo 1: 单步任务")
+
+    # Demo 2: 多步任务，LLM 自主决定调哪些工具、按什么顺序
+    run(
+        "北京今天气温多少度？100美元能换多少人民币？把这两个数字加起来。",
+        "Demo 2: 多步任务（观察 Agent 自主规划工具顺序）",
+    )
