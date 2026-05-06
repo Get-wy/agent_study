@@ -5,9 +5,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils import get_llm
 
-from langchain.agents import create_react_agent, AgentExecutor
+from langchain.agents import create_agent
 from langchain_core.tools import tool
-from langchain_core.prompts import PromptTemplate
 
 DB_PATH = Path(__file__).resolve().parent / "sales.db"
 llm = get_llm()
@@ -131,50 +130,25 @@ def execute_sql(query: str) -> str:
 
 tools = [get_schema, execute_sql]
 
-REACT_TEMPLATE = """你是一个数据分析助手，帮助用户查询销售数据库。
-
-可用工具：
-{tools}
-
-必须严格按照以下格式（关键词不变）：
-
-Question: 用户的问题
-Thought: 思考下一步
-Action: 工具名，必须是 [{tool_names}] 之一
-Action Input: 传给工具的参数
-Observation: 工具返回的结果
-...（可重复）
-Thought: 我现在知道最终答案了
-Final Answer: 用自然语言解释查询结果，给出洞察
-
-开始！
-
-Question: {input}
-Thought:{agent_scratchpad}"""
-
-prompt = PromptTemplate.from_template(REACT_TEMPLATE)
-agent = create_react_agent(llm, tools, prompt)
-agent_executor = AgentExecutor(
-    agent=agent,
-    tools=tools,
-    verbose=True,
-    max_iterations=8,
-    handle_parsing_errors=True,
-)
-
-SAMPLE_QUESTIONS = [
-    "销售额最高的产品是哪个？",
-    "购买过3次及以上的客户有哪些？",
-    "每个城市的总销售额是多少？按从高到低排序",
-]
+agent = create_agent(llm, tools)
 
 
 def run_query(question: str):
     print(f"\n{'=' * 55}")
     print(f"问题: {question}")
     print("=" * 55)
-    result = agent_executor.invoke({"input": question})
-    print(f"\n最终回答: {result['output']}")
+
+    result = agent.invoke({"messages": [{"role": "user", "content": question}]})
+
+    for msg in result["messages"]:
+        role = getattr(msg, "type", type(msg).__name__)
+        if role == "tool":
+            print(f"  [工具返回] {msg.content[:200]}")
+        elif role == "ai" and msg.tool_calls:
+            for tc in msg.tool_calls:
+                print(f"  [调用工具] {tc['name']}({tc['args']})")
+
+    print(f"\n最终回答: {result['messages'][-1].content}")
 
 
 if __name__ == "__main__":
@@ -182,7 +156,12 @@ if __name__ == "__main__":
 
     # Demo 1: 示例查询（展示 Agent 完整推理过程）
     print("\n【示例查询】")
-    for q in SAMPLE_QUESTIONS:
+    sample_questions = [
+        "销售额最高的产品是哪个？",
+        "购买过3次及以上的客户有哪些？",
+        "每个城市的总销售额是多少？按从高到低排序",
+    ]
+    for q in sample_questions:
         run_query(q)
 
     # Demo 2: 交互模式
