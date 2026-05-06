@@ -72,7 +72,7 @@ def run(question: str, label: str):
 
 if __name__ == "__main__":
     # Demo 1: 单步任务，LLM 调一个工具即可回答
-    run("北京今天天气怎么样？", "Demo 1: 单步任务")
+    # run("北京今天天气怎么样？", "Demo 1: 单步任务")
 
     # Demo 2: 多步任务，LLM 自主决定调哪些工具、按什么顺序
     run(
