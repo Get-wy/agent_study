@@ -11,7 +11,10 @@ AiAgent/
 ├── 第1课_最小RAG/demo.py
 ├── 第2课_Function_Calling/demo.py
 ├── 第3课_Streaming/demo.py
-└── 第4课_多轮对话与记忆/demo.py
+├── 第4课_多轮对话与记忆/demo.py
+├── 第5课_RAG质量调优/demo.py
+├── 第6课_ReAct_Agent/demo.py
+└── 第7课_AI数据查询助手/demo.py
 ```
 
 ## utils.py 公共方法
@@ -56,6 +59,28 @@ from utils import get_llm, get_api_key
 - 三种策略：全量（token线性增长）/ 窗口（保留近N轮）/ 摘要（压缩旧消息）
 - `SystemMessage` 设定身份，`HumanMessage / AIMessage` 维护历史
 - 持久化：session_id 粒度存 Redis 或数据库
+- 无新增依赖
+
+### 第5课_RAG质量调优
+- 沿用第1课 Redis + 阿里巴巴文档，对比三个维度的调优效果
+- Splitter：`RecursiveCharacterTextSplitter` 优先按段落切，语义比 `CharacterTextSplitter` 更完整
+- chunk_size：越小越精确但可能截断长句，越大信息完整但向量语义稀释；从 500 开始调
+- k 值：k=3 为默认起点，答案漏掉加大，上下文太长减小
+- 无新增依赖
+
+### 第6课_ReAct_Agent
+- ReAct = Reason + Act，LLM 自主决定调用哪个工具、按什么顺序、调几次
+- `create_react_agent` + `AgentExecutor` 自动处理 Thought→Action→Observation 循环
+- `@tool` 装饰器定义工具，docstring 是 LLM 选择工具的依据
+- 解析器依赖英文关键词：Action / Action Input / Final Answer，模板里不能改成中文
+- `verbose=True` 打印完整推理链，`handle_parsing_errors=True` 防崩溃
+- 无新增依赖
+
+### 第7课_AI数据查询助手
+- 综合 Demo：自然语言 → get_schema → execute_sql → 自然语言解释
+- SQLite 内置，零配置；只允许 SELECT，写操作一律拒绝
+- Agent 会自动重试：execute_sql 出错时 Agent 看到错误信息并修正 SQL
+- 生产扩展点：换 PostgreSQL 只改连接字符串，加行数限制防超出 context
 - 无新增依赖
 
 ## 环境信息
